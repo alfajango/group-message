@@ -12,6 +12,7 @@
   "dependencies": {
     "express": "3.x",
     "jade": "*",
-    "twilio": "*"
+    "querystring": "*",
+    "http": "*"
   }
 }
