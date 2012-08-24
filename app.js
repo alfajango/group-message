@@ -5,7 +5,7 @@
 var sys = require('sys');
 var express = require('express');
 
-var app = module.exports = express.createServer();
+var app = express();
 
 // Configuration
 
@@ -49,6 +49,7 @@ app.post('/incoming', function(req, res) {
 // Only listen on $ node app.js
 
 if (!module.parent) {
-  app.listen(app.get('port'));
-  console.log("Express server listening on port %d", app.address().port)
+  app.listen(app.get('port'), function() {
+    console.log("Express server listening on port %d", app.get('port'));
+  });
 }
