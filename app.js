@@ -32,19 +32,23 @@ app.configure('production', function(){
 
 var recipients = function(from) {
   var possibleRecip = 10,
-      allRecip = [];
+      allRecip = [],
+      fromInitials = null;
 
   for (var i = 0; i < possibleRecip; i++) {
     var thisRecip = "RECIPIENT_" + i,
         recip = process.env[thisRecip];
 
     if (recip) {
-      allRecip.push(recip);
+      if (recip === from) {
+        fromInitials = process.env["RECIPIENT_" + i + "_INITIALS"];
+      } else {
+        allRecip.push(recip);
+      }
     }
   }
 
-  sys.log('allRecip: ' + allRecip);
-  return allRecip;
+  return fromInitials ? {fromInitials: fromInitials, recipients: allRecip} : false;
 };
 
 var postSmsData = function(to, body) {
@@ -77,33 +81,38 @@ app.get('/', function(req, res){
 });
 
 app.post('/incoming', function(req, res) {
-  var message = req.body.Body;
-  var from = req.body.From;
+  var from = req.body.From,
+      setupRecip = recipients(from),
+      numSent = 0;
 
-  sys.log('From: ' + from + ', Message: ' + message);
-  var recip = recipients(from);
+  if (setupRecip) {
+    var recip = setupRecip.recipients,
+        initials = setupRecip.fromInitials,
+        message = initials + ': ' + req.body.Body;
 
-  var numSent = 0;
-  for (var i = 0; i < recip.length; i++) {
-    var smsData = postSmsData(from, message),
-        smsOptions = postSmsOptions(smsData),
-        sendSms = http.request(smsOptions, function(res) {
-          res.on('data', function (chunk) {
-            console.log('BODY: ' + chunk);
+    sys.log('From: ' + from + ', To: ' + recip.join() + ', Message: ' + message);
+
+    for (var i = 0; i < recip.length; i++) {
+      var smsData = postSmsData(from, message),
+          smsOptions = postSmsOptions(smsData),
+          sendSms = http.request(smsOptions, function(res) {
+            res.on('data', function (chunk) {
+              console.log('BODY: ' + chunk);
+            });
+            sys.log('Sent: ' + res.statusCode);
           });
-          sys.log('Sent: ' + res.statusCode);
-        });
 
-    sendSms.write(smsData)
+      sendSms.write(smsData)
 
-    sys.log(smsData);
-    console.log(smsOptions);
+      sys.log(smsData);
+      console.log(smsOptions);
 
-    sendSms.on('error', function(e) {
-      console.log('problem with request: ' + e.message);
-    });
+      sendSms.on('error', function(e) {
+        console.log('problem with request: ' + e.message);
+      });
 
-    sendSms.end();
+      sendSms.end();
+    }
   }
 
   res.send(null, {'Content-Type':'text/xml'}, 200);
