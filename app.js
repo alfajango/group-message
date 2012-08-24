@@ -85,37 +85,36 @@ app.post('/incoming', function(req, res) {
       setupRecip = recipients(from),
       numSent = 0;
 
-  if (setupRecip) {
-    var recip = setupRecip.recipients,
-        initials = setupRecip.fromInitials,
-        message = initials + ': ' + req.body.Body;
+  //if (setupRecip) {
+    //var recip = setupRecip.recipients,
+        //initials = setupRecip.fromInitials,
+        //message = initials + ': ' + req.body.Body;
 
-    sys.log('From: ' + from + ', To: ' + recip.join() + ', Message: ' + message);
+    //sys.log('From: ' + from + ', To: ' + recip.join() + ', Message: ' + message);
 
-    for (var i = 0; i < recip.length; i++) {
-      var smsData = postSmsData(from, message),
-          smsOptions = postSmsOptions(smsData),
-          sendSms = http.request(smsOptions, function(res) {
-            res.on('data', function (chunk) {
-              console.log('BODY: ' + chunk);
-            });
-            sys.log('Sent: ' + res.statusCode);
-          });
+    //for (var i = 0; i < recip.length; i++) {
+      //var smsData = postSmsData(from, message),
+          //smsOptions = postSmsOptions(smsData),
+          //sendSms = http.request(smsOptions, function(res) {
+            //res.on('data', function (chunk) {
+              //console.log('BODY: ' + chunk);
+            //});
+            //sys.log('Sent: ' + res.statusCode);
+          //});
 
-      sendSms.write(smsData)
+      //sendSms.write(smsData)
 
-      sys.log(smsData);
-      console.log(smsOptions);
+      //sys.log(smsData);
 
-      sendSms.on('error', function(e) {
-        console.log('problem with request: ' + e.message);
-      });
+      //sendSms.on('error', function(e) {
+        //console.log('problem with request: ' + e.message);
+      //});
 
-      sendSms.end();
-    }
-  }
+      //sendSms.end();
+    //}
+  //}
 
-  res.send(null, {'Content-Type':'text/xml'}, 200);
+  res.send('<?xml version="1.0" encoding="UTF-8" ?>\n<Response></Response>', {'Content-Type':'text/xml'}, 200);
 
 });
 
