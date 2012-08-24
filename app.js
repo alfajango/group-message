@@ -7,6 +7,10 @@ var express = require('express');
 
 var app = express();
 
+var TwilioClient = require('twilio').Client,
+    Twiml = require('twilio').Twiml,
+    twilClient = new TwilioClient(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN, 'api.twilio.com');
+
 // Configuration
 
 app.configure(function(){
@@ -55,9 +59,25 @@ app.post('/incoming', function(req, res) {
   var from = req.body.From;
 
   sys.log('From: ' + from + ', Message: ' + message);
-  recipients(from);
+  var recip = recipients(from);
   //var twiml = '<?xml version="1.0" encoding="UTF-8" ?>\n<Response>\n<Sms>Thanks for your text, we\'ll be in touch.</Sms>\n</Response>';
   res.send(null, {'Content-Type':'text/xml'}, 200);
+
+  var phone = twilClinet.getPhoneNumber(process.env.TWILIO_OUTGOING_NUMBER);
+  var numSent = 0;
+  phone.setup(function() {
+    for (var i = 0; i < recip.length; i++) {
+      phone.sendSms(recip[i], message, null, function(sms) {
+        sms.on('processed', function(reqParams, response) {
+          sys.log('Message processed:');
+          sys.log(reqParams);
+          numSent += 1;
+          if (numSent == recip.length) { process.exit(0); }
+        });
+      });
+    }
+  });
+
 });
 
 // Only listen on $ node app.js
