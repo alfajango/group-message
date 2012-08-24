@@ -7,12 +7,8 @@ var express = require('express');
 
 var app = express();
 
-var TwilioClient = require('twilio').Client,
-    Twiml = require('twilio').Twiml,
-    twilClient = new TwilioClient(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN, 'aj-group-message.herokuapp.com', {
-      "express" : app,
-      "port" : process.env.PORT
-    });
+var querystring = require('querystring'),
+    http = require('https');
 
 // Configuration
 
@@ -49,6 +45,29 @@ var recipients = function(from) {
 
   sys.log('allRecip: ' + allRecip);
   return allRecip;
+};
+
+var postSmsData = function(to, body) {
+  return querystring.stringify({
+    From: process.env.TWILIO_OUTGOING_NUMBER,
+    Body: body,
+    To: to
+  });
+};
+
+var postSmsOptions = function(data) {
+  return {
+    host: 'api.twilio.com',
+    port: '443',
+    path: '/2010-04-01/Accounts/' + process.env.TWILIO_ACCOUNT_SID + '/SMS/Messages.json',
+    method: 'POST',
+    auth: process.env.TWILIO_ACCOUNT_SID + ':' + process.env.TWILIO_AUTH_TOKEN,
+    body: data,
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Content-Length': data.length
+    }
+  }
 }
 
 app.get('/', function(req, res){
@@ -58,25 +77,36 @@ app.get('/', function(req, res){
 });
 
 app.post('/incoming', function(req, res) {
-  console.log(req.body);
-  var message = req.body.body;
-  var from = req.body.from;
+  var message = req.body.Body;
+  var from = req.body.From;
 
   sys.log('From: ' + from + ', Message: ' + message);
   var recip = recipients(from);
 
-  var phone = twilClient.getPhoneNumber(process.env.TWILIO_OUTGOING_NUMBER);
   var numSent = 0;
   for (var i = 0; i < recip.length; i++) {
-    phone.sendSms(recip[i], message, null, function(sms) {
-      sms.on('processed', function(reqParams, response) {
-        sys.log('Message processed:');
-        sys.log(reqParams);
-        numSent += 1;
-        if (numSent == recip.length) { process.exit(0); }
-      });
+    var smsData = postSmsData(from, message),
+        smsOptions = postSmsOptions(smsData),
+        sendSms = http.request(smsOptions, function(res) {
+          res.on('data', function (chunk) {
+            console.log('BODY: ' + chunk);
+          });
+          sys.log('Sent: ' + res.statusCode);
+        });
+
+    sendSms.write(smsData)
+
+    sys.log(smsData);
+    console.log(smsOptions);
+
+    sendSms.on('error', function(e) {
+      console.log('problem with request: ' + e.message);
     });
+
+    sendSms.end();
   }
+
+  res.send(null, {'Content-Type':'text/xml'}, 200);
 
 });
 
