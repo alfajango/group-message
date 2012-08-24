@@ -5,7 +5,7 @@
 var sys = require('sys');
 var express = require('express');
 
-var app = express.createServer();
+var app = express();
 
 var TwilioClient = require('twilio').Client,
     Twiml = require('twilio').Twiml,
@@ -16,6 +16,7 @@ var TwilioClient = require('twilio').Client,
 
 // Configuration
 
+app.configure(function(){
   app.set('views', __dirname + '/views');
   app.set('view engine', 'jade');
   app.set('port', process.env.PORT || 3000);
@@ -23,6 +24,7 @@ var TwilioClient = require('twilio').Client,
   app.use(express.methodOverride());
   app.use(app.router);
   app.use(express.static(__dirname + '/public'));
+});
 
 app.configure('development', function(){
   app.use(express.errorHandler({ dumpExceptions: true, showStack: true })); 
@@ -49,20 +51,18 @@ var recipients = function(from) {
   return allRecip;
 }
 
-app.get('/', function(reqParams, res){
+app.get('/', function(req, res){
   res.render('index', {
     title: 'Express'
   });
 });
 
-app.post('/incoming', function(reqParams, res) {
-  var message = reqParams.body;
-  var from = reqParams.from;
+app.post('/incoming', function(req, res) {
+  var message = req.body;
+  var from = req.from;
 
   sys.log('From: ' + from + ', Message: ' + message);
   var recip = recipients(from);
-
-  sys.inspect(reqParams.body);
 
   var phone = twilClient.getPhoneNumber(process.env.TWILIO_OUTGOING_NUMBER);
   var numSent = 0;
