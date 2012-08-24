@@ -9,7 +9,7 @@ var app = express();
 
 var TwilioClient = require('twilio').Client,
     Twiml = require('twilio').Twiml,
-    twilClient = new TwilioClient(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN, 'api.twilio.com', {
+    twilClient = new TwilioClient(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN, 'aj-group-message.herokuapp.com', {
       "express" : app,
       "port" : process.env.PORT
     });
@@ -57,18 +57,46 @@ app.get('/', function(req, res){
   });
 });
 
-app.post('/incoming', function(req, res) {
-  var message = req.body.Body;
-  var from = req.body.From;
+//app.post('/incoming', function(req, res) {
+  //sys.log('incoming:');
+  //console.log(req.Body);
+  //var message = req.Body;
+  //var from = req.From;
 
-  sys.log('From: ' + from + ', Message: ' + message);
-  var recip = recipients(from);
-  //var twiml = '<?xml version="1.0" encoding="UTF-8" ?>\n<Response>\n<Sms>Thanks for your text, we\'ll be in touch.</Sms>\n</Response>';
-  res.send(null, {'Content-Type':'text/xml'}, 200);
+  //sys.log('From: ' + from + ', Message: ' + message);
+  //var recip = recipients(from);
+  ////var twiml = '<?xml version="1.0" encoding="UTF-8" ?>\n<Response>\n<Sms>Thanks for your text, we\'ll be in touch.</Sms>\n</Response>';
+  //res.send(null, {'Content-Type':'text/xml'}, 200);
 
-  var phone = twilClinet.getPhoneNumber(process.env.TWILIO_OUTGOING_NUMBER);
-  var numSent = 0;
-  phone.setup(function() {
+  //var phone = twilClient.getPhoneNumber(process.env.TWILIO_OUTGOING_NUMBER);
+  //var numSent = 0;
+  //phone.setup(function() {
+    //for (var i = 0; i < recip.length; i++) {
+      //phone.sendSms(recip[i], message, null, function(sms) {
+        //sms.on('processed', function(reqParams, response) {
+          //sys.log('Message processed:');
+          //sys.log(reqParams);
+          //numSent += 1;
+          //if (numSent == recip.length) { process.exit(0); }
+        //});
+      //});
+    //}
+  //});
+
+//});
+
+
+var phone = twilClient.getPhoneNumber(process.env.TWILIO_OUTGOING_NUMBER);
+var numSent = 0;
+phone.setup(function() {
+  phone.on('incomingSms', function(reqParams, res) {
+    sys.log('incoming:');
+    console.log(reqParams.Body);
+    var message = reqParams.Body;
+    var from = reqParams.From;
+
+    sys.log('From: ' + from + ', Message: ' + message);
+    var recip = recipients(from);
     for (var i = 0; i < recip.length; i++) {
       phone.sendSms(recip[i], message, null, function(sms) {
         sms.on('processed', function(reqParams, response) {
@@ -80,7 +108,6 @@ app.post('/incoming', function(req, res) {
       });
     }
   });
-
 });
 
 // Only listen on $ node app.js
