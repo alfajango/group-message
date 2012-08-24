@@ -5,12 +5,15 @@
 var sys = require('sys');
 var express = require('express');
 
-var app = express();
 
 var TwilioClient = require('twilio').Client,
     Twiml = require('twilio').Twiml,
-    twilClient = new TwilioClient(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN, 'api.twilio.com');
+    twilClient = new TwilioClient(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN, 'api.twilio.com', {
+      "express" : express,
+      "port" : process.env.PORT
+    });
 
+var app = express();
 // Configuration
 
 app.configure(function(){
