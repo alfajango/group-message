@@ -58,8 +58,9 @@ app.get('/', function(req, res){
 });
 
 app.post('/incoming', function(req, res) {
-  var message = req.body;
-  var from = req.from;
+  console.log(req.body);
+  var message = req.body.body;
+  var from = req.body.from;
 
   sys.log('From: ' + from + ', Message: ' + message);
   var recip = recipients(from);
