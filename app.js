@@ -104,8 +104,6 @@ app.post('/incoming', function(req, res) {
 
       sendSms.write(smsData)
 
-      sys.log(smsData);
-
       sendSms.on('error', function(e) {
         console.log('problem with request: ' + e.message);
       });
