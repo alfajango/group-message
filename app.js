@@ -74,6 +74,33 @@ var postSmsOptions = function(data) {
   }
 }
 
+var sendError = function(from, error) {
+  var smsData = postSmsData(from, 'Message not sent. ' + error),
+      smsOptions = postSmsOptions(smsData),
+      sendSms = http.request(smsOptions, function(res) {
+        var resBody = '';
+        res.on('data', function (chunk) {
+          resBody += chunk;
+        });
+        res.on('end', function() {
+          sys.log('Response body: ' + resBody);
+          if (res.statusCode.toString()[0] === "2") {
+            sys.log('Error message sent.');
+          } else {
+            sys.log('Error message not sent!');
+          }
+        });
+      });
+
+  sendSms.write(smsData)
+
+  sendSms.on('error', function(e) {
+    sys.log('problem with request: ' + e.message);
+  });
+
+  sendSms.end();
+};
+
 app.get('/', function(req, res){
   res.render('index', {
     title: 'Express'
@@ -88,7 +115,8 @@ app.post('/incoming', function(req, res) {
   if (setupRecip) {
     var recip = setupRecip.recipients,
         initials = setupRecip.fromInitials,
-        message = initials + ': ' + req.body.Body;
+        message = initials + ': ' + req.body.Body,
+        errorMessageSent = false;
 
     sys.log('From: ' + from + ', To: ' + recip.join() + ', Message: ' + message);
 
@@ -96,16 +124,31 @@ app.post('/incoming', function(req, res) {
       var smsData = postSmsData(recip[i], message),
           smsOptions = postSmsOptions(smsData),
           sendSms = http.request(smsOptions, function(res) {
+            var resBody = '';
             res.on('data', function (chunk) {
-              console.log('BODY: ' + chunk);
+              resBody += chunk;
             });
-            sys.log('Sent: ' + res.statusCode);
+            res.on('end', function() {
+              sys.log('Response body: ' + resBody);
+              sys.log('Send status: ' + res.statusCode);
+              if (res.statusCode.toString()[0] === "2") {
+                sys.log('Sent.');
+              } else {
+                sys.log('Not sent!');
+                if (!errorMessageSent) {
+                  var responseJson = JSON.parse(resBody);
+                  errorMessageSent = true;
+                  sendError(from, [responseJson.message, 'More info:', responseJson.more_info].join(' '));
+                }
+              }
+            });
           });
 
       sendSms.write(smsData)
 
       sendSms.on('error', function(e) {
-        console.log('problem with request: ' + e.message);
+        sys.log('problem with request: ' + e.message);
+        sendError(from, e.message);
       });
 
       sendSms.end();
