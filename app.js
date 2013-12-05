@@ -116,42 +116,45 @@ app.post('/incoming', function(req, res) {
     var recip = setupRecip.recipients,
         initials = setupRecip.fromInitials,
         message = initials + ': ' + req.body.Body,
+        messages = message.match(/.{1,160}/g), // split message into 160-character chunks
         errorMessageSent = false;
 
     sys.log('From: ' + from + ', To: ' + recip.join() + ', Message: ' + message);
 
-    for (var i = 0; i < recip.length; i++) {
-      var smsData = postSmsData(recip[i], message),
-          smsOptions = postSmsOptions(smsData),
-          sendSms = http.request(smsOptions, function(res) {
-            var resBody = '';
-            res.on('data', function (chunk) {
-              resBody += chunk;
-            });
-            res.on('end', function() {
-              sys.log('Response body: ' + resBody);
-              sys.log('Send status: ' + res.statusCode);
-              if (res.statusCode.toString()[0] === "2") {
-                sys.log('Sent.');
-              } else {
-                sys.log('Not sent!');
-                if (!errorMessageSent) {
-                  var responseJson = JSON.parse(resBody);
-                  errorMessageSent = true;
-                  sendError(from, [responseJson.message, 'More info:', responseJson.more_info].join(' '));
+    for (var n = 0; n < messages.length; n++) {
+      for (var i = 0; i < recip.length; i++) {
+        var smsData = postSmsData(recip[i], messages[n]),
+            smsOptions = postSmsOptions(smsData),
+            sendSms = http.request(smsOptions, function(res) {
+              var resBody = '';
+              res.on('data', function (chunk) {
+                resBody += chunk;
+              });
+              res.on('end', function() {
+                sys.log('Response body: ' + resBody);
+                sys.log('Send status: ' + res.statusCode);
+                if (res.statusCode.toString()[0] === "2") {
+                  sys.log('Sent.');
+                } else {
+                  sys.log('Not sent!');
+                  if (!errorMessageSent) {
+                    var responseJson = JSON.parse(resBody);
+                    errorMessageSent = true;
+                    sendError(from, [responseJson.message, 'More info:', responseJson.more_info].join(' '));
+                  }
                 }
-              }
+              });
             });
-          });
 
-      sendSms.write(smsData)
+        sendSms.write(smsData)
 
-      sendSms.on('error', function(e) {
-        sys.log('problem with request: ' + e.message);
-        sendError(from, e.message);
-      });
+        sendSms.on('error', function(e) {
+          sys.log('problem with request: ' + e.message);
+          sendError(from, e.message);
+        });
 
-      sendSms.end();
+        sendSms.end();
+      }
     }
   }
 
