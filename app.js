@@ -118,20 +118,23 @@ app.post('/incoming', function(req, res) {
       setupRecip = recipients(from),
       numSent = 0;
 
+  sys.log('Received: ' + JSON.stringify(req.body));
+
   if (setupRecip) {
     var recip = setupRecip.recipients,
         initials = setupRecip.fromInitials,
         message = initials + ': ' + req.body.Body,
-        mediaUrl = req.body.MediaUrl,
+        numMedia = req.body.NumMedia && parseInt(req.body.NumMedia),
+        mediaUrl = req.body.MediaUrl0,
         messages = mediaUrl ? [message] : message.match(/.{1,160}/g), // split message into 160-character chunks if plain SMS text (MMS can support much larger messages)
         errorMessageSent = false;
 
-    sys.log('From: ' + from + ', To: ' + recip.join() + ', Message: ' + message, ', Media URL: ' + mediaUrl);
+    sys.log('From: ' + from + ', To: ' + recip.join() + ', Num Media: ' + numMedia + ', Media URL: ' + mediaUrl + ', Message: ' + message);
 
     for (var n = 0; n < messages.length; n++) {
       for (var i = 0; i < recip.length; i++) {
         if (mediaUrl && n === 0) {
-          var smsData = postSmsData(recip[i], messages[n]), mediaUrl;
+          var smsData = postSmsData(recip[i], messages[n], mediaUrl);
         } else {
           var smsData = postSmsData(recip[i], messages[n]);
         }
