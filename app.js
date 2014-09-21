@@ -138,6 +138,7 @@ app.post('/incoming', function(req, res) {
         } else {
           var smsData = postSmsData(recip[i], messages[n]);
         }
+        sys.log('Sending: ' + smsData);
         var smsOptions = postSmsOptions(smsData),
             sendSms = http.request(smsOptions, function(res) {
               var resBody = '';
