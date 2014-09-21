@@ -51,12 +51,18 @@ var recipients = function(from) {
   return fromInitials ? {fromInitials: fromInitials, recipients: allRecip} : false;
 };
 
-var postSmsData = function(to, body) {
-  return querystring.stringify({
+var postSmsData = function(to, body, mediaUrl) {
+  var data = {
     From: process.env.TWILIO_OUTGOING_NUMBER,
     Body: body,
     To: to
-  });
+  };
+
+  if (mediaUrl) {
+    data.MediaUrl = mediaUrl;
+  }
+
+  return querystring.stringify(data);
 };
 
 var postSmsOptions = function(data) {
@@ -116,15 +122,20 @@ app.post('/incoming', function(req, res) {
     var recip = setupRecip.recipients,
         initials = setupRecip.fromInitials,
         message = initials + ': ' + req.body.Body,
-        messages = message.match(/.{1,160}/g), // split message into 160-character chunks
+        mediaUrl = req.body.MediaUrl,
+        messages = mediaUrl ? [message] : message.match(/.{1,160}/g), // split message into 160-character chunks if plain SMS text (MMS can support much larger messages)
         errorMessageSent = false;
 
-    sys.log('From: ' + from + ', To: ' + recip.join() + ', Message: ' + message);
+    sys.log('From: ' + from + ', To: ' + recip.join() + ', Message: ' + message, ', Media URL: ' + mediaUrl);
 
     for (var n = 0; n < messages.length; n++) {
       for (var i = 0; i < recip.length; i++) {
-        var smsData = postSmsData(recip[i], messages[n]),
-            smsOptions = postSmsOptions(smsData),
+        if (mediaUrl && n === 0) {
+          var smsData = postSmsData(recip[i], messages[n]), mediaUrl;
+        } else {
+          var smsData = postSmsData(recip[i], messages[n]);
+        }
+        var smsOptions = postSmsOptions(smsData),
             sendSms = http.request(smsOptions, function(res) {
               var resBody = '';
               res.on('data', function (chunk) {
