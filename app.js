@@ -75,7 +75,7 @@ var postSmsOptions = function(data) {
   return {
     host: 'api.twilio.com',
     port: '443',
-    path: '/2010-04-01/Accounts/' + process.env.TWILIO_ACCOUNT_SID + '/SMS/Messages.json',
+    path: '/2010-04-01/Accounts/' + process.env.TWILIO_ACCOUNT_SID + '/Messages.json',
     method: 'POST',
     auth: process.env.TWILIO_ACCOUNT_SID + ':' + process.env.TWILIO_AUTH_TOKEN,
     body: data,
@@ -137,12 +137,12 @@ app.post('/incoming', function(req, res) {
         messages = mediaUrl ? [message] : message.match(/.{1,160}/g), // split message into 160-character chunks if plain SMS text (MMS can support much larger messages)
         errorMessageSent = false;
 
-    sys.log('From: ' + from + ', To: ' + recip.join() + ', Num Media: ' + numMedia + ', Media URL: ' + mediaUrl + ', Message: ' + message);
-
     // Replace Twilio media URL, which redirects, to our own proxy, which follows redirect and renders image
     if (mediaUrl) {
       mediaUrl = "https://aj-group-message.herokuapp.com/proxy?image_url=" + escape(mediaUrl);
     }
+
+    sys.log('From: ' + from + ', To: ' + recip.join() + ', Num Media: ' + numMedia + ', Media URL: ' + mediaUrl + ', Message: ' + message);
 
     for (var n = 0; n < messages.length; n++) {
       for (var i = 0; i < recip.length; i++) {
