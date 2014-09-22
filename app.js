@@ -134,7 +134,7 @@ app.post('/incoming', function(req, res) {
 
     // Replace Twilio media URL, which redirects, to our own proxy, which follows redirect and renders image
     if (mediaUrl) {
-      mediaUrl = "https://aj-group-message.herokuapp.com/proxy/" + escape(mediaUrl);
+      mediaUrl = "https://aj-group-message.herokuapp.com/proxy?image_url=" + escape(mediaUrl);
     }
 
     for (var n = 0; n < messages.length; n++) {
@@ -183,8 +183,8 @@ app.post('/incoming', function(req, res) {
 
 });
 
-app.get('/proxy/:image_url', function(req, res) {
-  var image_url = unescape(req.params.image_url);
+app.get('/proxy', function(req, res) {
+  var image_url = unescape(req.query.image_url);
   sys.puts("Starting proxy: " + image_url);
 
   var image_host_name = url.parse(image_url).hostname;
