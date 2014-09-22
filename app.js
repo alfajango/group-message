@@ -31,7 +31,7 @@ app.configure('production', function(){
   app.use(express.errorHandler()); 
 });
 
-var recipients = function(from) {
+var recipients = function(from, toSelf) {
   var possibleRecip = 10,
       allRecip = [],
       fromInitials = null;
@@ -43,8 +43,13 @@ var recipients = function(from) {
     if (recip) {
       if (recip === from) {
         fromInitials = process.env["RECIPIENT_" + i + "_INITIALS"];
+        if (toSelf) {
+          allRecip.push(from);
+        }
       } else {
-        allRecip.push(recip);
+        if (!toSelf) {
+          allRecip.push(recip);
+        }
       }
     }
   }
@@ -116,7 +121,9 @@ app.get('/', function(req, res){
 
 app.post('/incoming', function(req, res) {
   var from = req.body.From,
-      setupRecip = recipients(from),
+      // Allow to send test messages to self by prepending message with ~
+      toSelf = req.body.Body && req.body.Body.match(/^(\s+)?~/),
+      setupRecip = recipients(from, toSelf),
       numSent = 0;
 
   sys.log('Received: ' + JSON.stringify(req.body));
@@ -124,7 +131,7 @@ app.post('/incoming', function(req, res) {
   if (setupRecip) {
     var recip = setupRecip.recipients,
         initials = setupRecip.fromInitials,
-        message = initials + ': ' + req.body.Body,
+        message = initials + (toSelf ? ' (test)' : '') + ': ' + req.body.Body,
         numMedia = req.body.NumMedia && parseInt(req.body.NumMedia),
         mediaUrl = req.body.MediaUrl0,
         messages = mediaUrl ? [message] : message.match(/.{1,160}/g), // split message into 160-character chunks if plain SMS text (MMS can support much larger messages)
