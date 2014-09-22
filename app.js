@@ -8,7 +8,8 @@ var express = require('express');
 var app = express();
 
 var querystring = require('querystring'),
-    http = require('https');
+    http = require('follow-redirects').https,
+    url = require('url');
 
 // Configuration
 
@@ -131,6 +132,11 @@ app.post('/incoming', function(req, res) {
 
     sys.log('From: ' + from + ', To: ' + recip.join() + ', Num Media: ' + numMedia + ', Media URL: ' + mediaUrl + ', Message: ' + message);
 
+    // Replace Twilio media URL, which redirects, to our own proxy, which follows redirect and renders image
+    if (mediaUrl) {
+      mediaUrl = "https://aj-group-message.herokuapp.com/proxy/" + escape(mediaUrl);
+    }
+
     for (var n = 0; n < messages.length; n++) {
       for (var i = 0; i < recip.length; i++) {
         if (mediaUrl && n === 0) {
@@ -177,6 +183,32 @@ app.post('/incoming', function(req, res) {
 
 });
 
+app.get('/proxy/:image_url', function(req, res) {
+  var image_url = unescape(req.params.image_url);
+  sys.puts("Starting proxy: " + image_url);
+
+  var image_host_name = url.parse(image_url).hostname;
+  var pathname = url.parse(image_url).pathname;
+
+  var image_get_request = http.request({"method": 'GET', "path": pathname, "host": image_host_name, "port": 443}, function(proxy_response) {
+    var current_byte_index = 0;
+    var response_content_length = parseInt(proxy_response.headers["content-length"]);
+    var response_content_type = proxy_response.headers["content-type"];
+    var response_body = new Buffer(response_content_length);
+    sys.puts("Image proxy response: " + JSON.stringify(proxy_response.headers) + ", Content Length: " + response_content_length + ", Content Type: " + response_content_type);
+
+    proxy_response.setEncoding('binary');
+    proxy_response.on('data', function(chunk){
+      response_body.write(chunk, current_byte_index, "binary");
+      current_byte_index += chunk.length;
+    });
+    proxy_response.on('end', function(){
+      res.contentType(response_content_type);
+      res.send(response_body);
+    });
+  });
+  image_get_request.end();
+});
 
 // Only listen on $ node app.js
 
