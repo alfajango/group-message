@@ -32,7 +32,7 @@ app.configure('production', function(){
 });
 
 var recipients = function(from, toSelf) {
-  var possibleRecip = 10,
+  var possibleRecip = 99,
       allRecip = [],
       fromInitials = null;
 
