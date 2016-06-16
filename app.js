@@ -48,7 +48,7 @@ var recipients = function(from, toSelf, to) {
           allRecip.push(from);
         }
       } else if (toRecip) {
-        if (toRecip == process.env[thisRecip + "_INITIALS"]) {
+        if (toRecip.toLowerCase() == process.env[thisRecip + "_INITIALS"].toLowerCase()) {
           allRecip.push(recip);
         }
       } else {
