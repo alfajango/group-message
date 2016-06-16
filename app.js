@@ -24,17 +24,18 @@ app.configure(function(){
 });
 
 app.configure('development', function(){
-  app.use(express.errorHandler({ dumpExceptions: true, showStack: true })); 
+  app.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
 });
 
 app.configure('production', function(){
-  app.use(express.errorHandler()); 
+  app.use(express.errorHandler());
 });
 
-var recipients = function(from, toSelf) {
+var recipients = function(from, toSelf, to) {
   var possibleRecip = 99,
       allRecip = [],
-      fromInitials = null;
+      fromInitials = null,
+      toRecip = to && to[1];
 
   for (var i = 0; i < possibleRecip; i++) {
     var thisRecip = "RECIPIENT_" + i,
@@ -42,9 +43,13 @@ var recipients = function(from, toSelf) {
 
     if (recip) {
       if (recip === from) {
-        fromInitials = process.env["RECIPIENT_" + i + "_INITIALS"];
+        fromInitials = process.env[thisRecip + "_INITIALS"];
         if (toSelf) {
           allRecip.push(from);
+        }
+      } else if (toRecip) {
+        if (toRecip == process.env[thisRecip + "_INITIALS"]) {
+          allRecip.push(recip);
         }
       } else {
         if (!toSelf) {
@@ -123,7 +128,9 @@ app.post('/incoming', function(req, res) {
   var from = req.body.From,
       // Allow to send test messages to self by prepending message with ~
       toSelf = req.body.Body && req.body.Body.match(/^(\s+)?~/),
-      setupRecip = recipients(from, toSelf),
+      // Allow sending message to specific recipient by prepending message with @<recipient_initials>, e.g. @SS
+      recipInitials = req.body.Body && req.body.Body.match(/^(?:\s+)?@([a-zA-Z]{2})/),
+      setupRecip = recipients(from, toSelf, recipInitials),
       numSent = 0;
 
   sys.log('Received: ' + JSON.stringify(req.body));
